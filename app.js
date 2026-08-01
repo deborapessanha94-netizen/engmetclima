@@ -4,6 +4,48 @@ const ACCOUNT_KEY = 'engmetclima-pwa-account';
 const LAST_EMAIL_KEY = 'engmetclima-pwa-last-email';
 const FAVORITES_KEY = 'engmetclima-pwa-favorites';
 const SETTINGS_KEY = 'engmetclima-pwa-settings';
+const SUPABASE_SESSION_KEY = 'engmetclima-pwa-supabase-session';
+const SUPABASE_CONFIG = globalThis.ENGMETCLIMA_SUPABASE || {};
+const SUPABASE_URL = String(SUPABASE_CONFIG.url || '').replace(/\/$/, '');
+const SUPABASE_KEY = String(SUPABASE_CONFIG.publishableKey || '');
+const hasSupabase = () => Boolean(SUPABASE_URL && SUPABASE_KEY);
+const getSupabaseSession = () => { try { return JSON.parse(localStorage.getItem(SUPABASE_SESSION_KEY) || 'null'); } catch { return null; } };
+const saveSupabaseSession = session => { if (session?.access_token) localStorage.setItem(SUPABASE_SESSION_KEY, JSON.stringify(session)); };
+const clearSupabaseSession = () => localStorage.removeItem(SUPABASE_SESSION_KEY);
+const appUrl = () => `${location.origin}${location.pathname}`;
+async function supabaseFetch(path, options = {}, token = '') {
+  const response = await fetch(`${SUPABASE_URL}${path}`, {
+    ...options,
+    headers: { apikey: SUPABASE_KEY, ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.msg || data?.message || data?.error_description || 'Não foi possível concluir esta ação agora.');
+  return data;
+}
+async function supabaseCurrentUser() {
+  const session = getSupabaseSession();
+  if (!session?.access_token) return null;
+  try { return await supabaseFetch('/auth/v1/user', {}, session.access_token); }
+  catch { clearSupabaseSession(); return null; }
+}
+async function beginSupabaseSession(session) {
+  saveSupabaseSession(session);
+  const user = session.user || await supabaseCurrentUser();
+  if (!user) throw new Error('Não foi possível confirmar a sessão.');
+  const metadata = user.user_metadata || {};
+  localStorage.setItem(LAST_EMAIL_KEY, user.email || '');
+  localStorage.setItem(USER_KEY, JSON.stringify({ name: String(user.email || '').split('@')[0], email: user.email || '', birthDate: metadata.birth_date || '', profession: metadata.profession || '' }));
+}
+async function signOut() {
+  const session = getSupabaseSession();
+  if (hasSupabase() && session?.access_token) {
+    try { await supabaseFetch('/auth/v1/logout', { method: 'POST' }, session.access_token); } catch { /* Sessão local será removida mesmo sem rede. */ }
+  }
+  clearSupabaseSession();
+  localStorage.removeItem(USER_KEY);
+  login();
+}
+Object.assign(globalThis, { hasSupabase, supabaseFetch, supabaseCurrentUser, beginSupabaseSession, signOut });
 const DISASTER_COUNTRY_KEY = 'engmetclima-pwa-disaster-countries';
 const COUNTRY_CODES = 'AF,AL,DZ,AD,AO,AG,AR,AM,AU,AT,AZ,BS,BH,BD,BB,BY,BE,BZ,BJ,BT,BO,BA,BW,BR,BN,BG,BF,BI,CV,KH,CM,CA,CF,TD,CL,CN,CY,CO,KM,CG,CD,CR,CI,HR,CU,CZ,DK,DJ,DM,DO,EC,EG,SV,GQ,ER,EE,SZ,ET,FJ,FI,FR,GA,GM,GE,DE,GH,GR,GD,GT,GN,GW,GY,HT,HN,HU,IS,IN,ID,IR,IQ,IE,IL,IT,JM,JP,JO,KZ,KE,KI,KW,KG,LA,LV,LB,LS,LR,LY,LI,LT,LU,MG,MW,MY,MV,ML,MT,MH,MR,MU,MX,FM,MD,MC,MN,ME,MA,MZ,MM,NA,NR,NP,NL,NZ,NI,NE,NG,KP,MK,NO,OM,PK,PW,PA,PG,PY,PE,PH,PL,PT,QA,RO,RU,RW,KN,LC,VC,WS,SM,ST,SA,SN,RS,SC,SL,SG,SK,SI,SB,SO,ZA,KR,SS,ES,LK,SD,SR,SE,CH,SY,TJ,TZ,TH,TL,TG,TO,TT,TN,TR,TM,TV,UG,UA,AE,GB,US,UY,UZ,VU,VA,VE,VN,YE,ZM,ZW,PS'.split(',');
 window.addEventListener('DOMContentLoaded', () => {
@@ -455,7 +497,7 @@ function formatMoney(value){ const number=Number(value||0); return number>=10000
 async function importAtlasFile(file){ atlasStatus='Lendo a base oficial do Atlas…'; render(); try{ parseAtlasCsv(await file.text()); atlasStatus=`Base oficial carregada: ${atlasRows.length.toLocaleString('pt-BR')} registros disponíveis para filtro.`; }catch{ atlasRows=[]; atlasColumns=[]; atlasStatus='Não foi possível ler este arquivo. Baixe o CSV oficial do Atlas e tente novamente.'; } render(); }
 function wireDisasterFilters(){ document.querySelector('#atlas-file-button')?.addEventListener('click',()=>document.querySelector('#atlas-file')?.click()); document.querySelector('#atlas-file')?.addEventListener('change',event=>{ const file=event.target.files?.[0]; if(file) void importAtlasFile(file); }); document.querySelector('#atlas-apply')?.addEventListener('click',()=>{ atlasFilters={uf:document.querySelector('#atlas-uf')?.value||'',year:document.querySelector('#atlas-year')?.value||'',type:document.querySelector('#atlas-type')?.value||'',city:document.querySelector('#atlas-city')?.value||''}; render(); }); }
 function view(){ return {inicio:home,tempo,guia,oportunidades,oceano,raios,terra,ciclones,desastres:desastresView,clima,globo:globe,favoritos:favorites,alertas:alerts,lua:luaInmet,configuracoes}[active](); }
-function render(){ app.innerHTML=`<main class="mobile-shell">${view()}</main>${nav()}`; document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{active=b.dataset.tab;render()}); document.querySelectorAll('[data-location]').forEach(b=>b.onclick=()=>{selected=LOCATIONS.find(x=>x.id===b.dataset.location) || selected; loadLocation();render()}); document.querySelectorAll('[data-favorite-weather]').forEach(button=>button.onclick=async()=>{const place=getFavorites()[Number(button.dataset.favoriteWeather)]; if(!place) return; selected={id:`favorite-${place.latitude}-${place.longitude}`,name:place.name,latitude:place.latitude,longitude:place.longitude,marine:true}; weather=null;air=null;marine=null;render();await loadAll();}); document.querySelector('#logout')?.addEventListener('click',()=>{localStorage.removeItem(USER_KEY);login()}); document.querySelector('#refresh')?.addEventListener('click',()=>{favoriteWeather={};void loadAll()}); document.querySelector('#use-location')?.addEventListener('click',()=>void requestCurrentLocation()); document.querySelector('#globe-toggle')?.addEventListener('click',()=>{globePaused=!globePaused;render()}); document.querySelector('#disaster-country')?.addEventListener('change',event=>{disasterCountryFilter=event.target.value;render()}); document.querySelector('#show-el-nino')?.addEventListener('click',()=>{ensoMode='el-nino';render()}); document.querySelector('#show-la-nina')?.addEventListener('click',()=>{ensoMode='la-nina';render()}); document.querySelectorAll('[data-setting]').forEach(control=>control.addEventListener('change',()=>{const settings=getSettings(); settings[control.dataset.setting]=control.type==='checkbox'?control.checked:control.value; saveSettings(settings); })); document.querySelector('#settings-logout')?.addEventListener('click',()=>{localStorage.removeItem(USER_KEY);login()}); document.querySelector('#settings-favorites')?.addEventListener('click',()=>{active='favoritos';render()}); document.querySelector('#settings-enable-notifications')?.addEventListener('click',()=>void enableUpdateNotifications()); document.querySelector('#settings-clear-cache')?.addEventListener('click',()=>{favoriteWeather={}; void loadAll();}); if(active==='favoritos') wireFavorites(); if(active==='tempo') { wireWeatherLocationSearch(); wireFavoriteCarousel(); void loadFavoriteWeather(); } if(active==='oceano') wireOceanLocationSearch(); if(active==='raios') wireLightningLocationSearch(); if(active==='desastres') wireRiskLocationSearch(); if(active==='lua') wireMoonLocationSearch(); if(active==='alertas') wireAlertsLocationSearch(); if(active==='globo') setTimeout(mountInteractiveGlobe,0); }
+function render(){ app.innerHTML=`<main class="mobile-shell">${view()}</main>${nav()}`; document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{active=b.dataset.tab;render()}); document.querySelectorAll('[data-location]').forEach(b=>b.onclick=()=>{selected=LOCATIONS.find(x=>x.id===b.dataset.location) || selected; loadLocation();render()}); document.querySelectorAll('[data-favorite-weather]').forEach(button=>button.onclick=async()=>{const place=getFavorites()[Number(button.dataset.favoriteWeather)]; if(!place) return; selected={id:`favorite-${place.latitude}-${place.longitude}`,name:place.name,latitude:place.latitude,longitude:place.longitude,marine:true}; weather=null;air=null;marine=null;render();await loadAll();}); document.querySelector('#logout')?.addEventListener('click',()=>void signOut()); document.querySelector('#refresh')?.addEventListener('click',()=>{favoriteWeather={};void loadAll()}); document.querySelector('#use-location')?.addEventListener('click',()=>void requestCurrentLocation()); document.querySelector('#globe-toggle')?.addEventListener('click',()=>{globePaused=!globePaused;render()}); document.querySelector('#disaster-country')?.addEventListener('change',event=>{disasterCountryFilter=event.target.value;render()}); document.querySelector('#show-el-nino')?.addEventListener('click',()=>{ensoMode='el-nino';render()}); document.querySelector('#show-la-nina')?.addEventListener('click',()=>{ensoMode='la-nina';render()}); document.querySelectorAll('[data-setting]').forEach(control=>control.addEventListener('change',()=>{const settings=getSettings(); settings[control.dataset.setting]=control.type==='checkbox'?control.checked:control.value; saveSettings(settings); })); document.querySelector('#settings-logout')?.addEventListener('click',()=>void signOut()); document.querySelector('#settings-favorites')?.addEventListener('click',()=>{active='favoritos';render()}); document.querySelector('#settings-enable-notifications')?.addEventListener('click',()=>void enableUpdateNotifications()); document.querySelector('#settings-clear-cache')?.addEventListener('click',()=>{favoriteWeather={}; void loadAll();}); if(active==='favoritos') wireFavorites(); if(active==='tempo') { wireWeatherLocationSearch(); wireFavoriteCarousel(); void loadFavoriteWeather(); } if(active==='oceano') wireOceanLocationSearch(); if(active==='raios') wireLightningLocationSearch(); if(active==='desastres') wireRiskLocationSearch(); if(active==='lua') wireMoonLocationSearch(); if(active==='alertas') wireAlertsLocationSearch(); if(active==='globo') setTimeout(mountInteractiveGlobe,0); }
 function account(){ try{return JSON.parse(localStorage.getItem(ACCOUNT_KEY)||'null')}catch{return null} }
 async function passwordFingerprint(value){
   if (globalThis.crypto?.subtle) {
