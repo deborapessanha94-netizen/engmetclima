@@ -1,0 +1,9 @@
+{
+  "name": "Engmetclima",
+  "short_name": "Engmetclima",
+  "description": "Atmosfera, oceano e Terra em um só lugar.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#071225",
+  "theme_color": "#071225"
+}

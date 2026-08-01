@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#071225" />
+    <meta name="description" content="Engmetclima: atmosfera, oceano e Terra em um só lugar." />
+  <link rel="stylesheet" href="styles.css?v=69" />
+    <title>Engmetclima</title>
+  </head>
+  <body>
+    <main id="app" class="app-shell" aria-live="polite">
+      <section class="login"><div class="login-card"><div class="mark">◌</div><h1>Engmetclima</h1><p class="subtle">Preparando o aplicativo…</p></div></section>
+    </main>
+    <script>
+      window.addEventListener('error', function (event) {
+        document.querySelector('#app').innerHTML = '<section class="login"><div class="login-card"><div class="mark">!</div><h1>Não foi possível iniciar</h1><p class="subtle">' + event.message + '</p><button class="primary" onclick="location.reload()">Tentar novamente</button></div></section>';
+      });
+      if (navigator.serviceWorker) navigator.serviceWorker.register = function () { return Promise.resolve(); };
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js" defer></script>
+    <script src="https://unpkg.com/globe.gl" defer></script>
+    <script src="https://unpkg.com/topojson-client@3" defer></script>
+  <script src="app.js?v=69" defer></script>
+  </body>
+</html>
