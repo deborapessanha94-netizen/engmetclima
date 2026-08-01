@@ -61,3 +61,12 @@ button,input { font:inherit; } button { cursor:pointer; } .app-shell { width:min
 :root:not([data-theme="claro"]) .notice { background:rgba(78,142,162,.22); border-left-color:#7bbde8; color:#e2f0fa; }
 :root:not([data-theme="claro"]) .primary { background:#7bbde8; color:#001d39; }
 :root:not([data-theme="claro"]) .logout,:root:not([data-theme="claro"]) .remove { border-color:#7bbde8; color:#bdd8e9; }
+
+.pwa-install { position:fixed; z-index:20; right:16px; bottom:calc(92px + env(safe-area-inset-bottom)); display:none; align-items:center; gap:8px; border:1px solid #7bbde8; border-radius:999px; padding:11px 15px; background:#001d39; color:#f1f7fb; box-shadow:0 10px 30px rgba(0,0,0,.28); font-weight:800; }
+.pwa-install.visible { display:flex; }
+.pwa-hint { position:fixed; z-index:20; right:16px; bottom:calc(92px + env(safe-area-inset-bottom)); width:min(300px,calc(100vw - 32px)); border:1px solid var(--line); border-radius:16px; padding:13px 15px; background:#001d39; color:#e4f1fb; box-shadow:0 10px 30px rgba(0,0,0,.28); }
+.pwa-hint button { float:right; border:0; padding:2px 0 2px 12px; background:transparent; color:#7bbde8; font-weight:800; }
+:root[data-theme="claro"] .pwa-install,:root[data-theme="claro"] .pwa-hint { background:#fff; color:#132644; }
+
+/* O mesmo ícone usado ao instalar o PWA aparece na entrada e na criação de conta. */
+.login-card .mark { border:0; background:url("icons/icon-192.png") center/cover no-repeat; color:transparent; font-size:0; box-shadow:0 0 0 8px rgba(123,189,232,.12),0 8px 22px rgba(0,0,0,.22); }
