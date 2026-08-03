@@ -1,5 +1,5 @@
-const CACHE = 'engmetclima-v8';
-const APP_SHELL = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest', './supabase-config.js', './supabase-auth.js', './supabase-sync.js', './pwa-install.js', './icons/icon-192.png', './icons/icon-512.png'];
+const CACHE = 'engmetclima-v22';
+const APP_SHELL = ['./', './index.html', './styles.css', './app.js', './detailed-globe.js', './manifest.webmanifest', './supabase-config.js', './supabase-auth.js', './supabase-sync.js', './home-local-summary.js', './pwa-install.js', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', event => {

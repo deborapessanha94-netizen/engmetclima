@@ -6,6 +6,12 @@
   const sessionKey = 'engmetclima-pwa-supabase-session';
   const userKey = 'engmetclima-pwa-user';
   const emailKey = 'engmetclima-pwa-last-email';
+  const authMessage = reason => {
+    const message = String(reason?.message || '');
+    if (/email rate limit exceeded|over_email_send_rate_limit/i.test(message)) return 'Muitos e-mails de confirmação foram solicitados recentemente. Aguarde cerca de uma hora ou peça ao responsável pelo aplicativo para configurar o serviço de e-mail.';
+    if (/email address not authorized/i.test(message)) return 'Este endereço ainda não pode receber e-mails de confirmação. O responsável pelo aplicativo precisa configurar o envio de e-mails.';
+    return message || 'Não foi possível concluir agora. Tente novamente em instantes.';
+  };
 
   window.login = function login(mode = 'signin', message = '') {
     const email = localStorage.getItem(emailKey) || '';
@@ -53,7 +59,7 @@
       } catch (reason) {
         button.disabled = false;
         button.textContent = reset ? 'Enviar e-mail de recuperação' : create ? 'Criar conta' : 'Entrar no aplicativo';
-        error.textContent = reason?.message || 'Não foi possível concluir agora.';
+        error.textContent = authMessage(reason);
       }
     };
   };
